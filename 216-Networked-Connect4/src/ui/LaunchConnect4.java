@@ -21,6 +21,8 @@ public class LaunchConnect4 {
 
 		{
 			Connect4TextConsole newPlayer = new Connect4TextConsole();
+			myScanner.close();
+			newPlayer.start();
 		}
 
 	}

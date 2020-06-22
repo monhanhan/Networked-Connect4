@@ -48,9 +48,8 @@ public class Connect4TextConsole implements Connect4Constants {
 
 	public void start() {
 		new Thread(() -> {
-			System.out.println("poopiedooks");
 
-		});
+		}).start();
 	}
 
 	/**
