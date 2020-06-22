@@ -130,13 +130,6 @@ public class Connect4Server extends Application implements Connect4Constants {
 			}
 		}
 
-		/** Send the move to other player */
-		private void sendMove(DataOutputStream out, int row, int column)
-				throws IOException {
-			out.writeInt(row); // Send row index
-			out.writeInt(column); // Send column index
-		}
-
 	}
 
 	/**
