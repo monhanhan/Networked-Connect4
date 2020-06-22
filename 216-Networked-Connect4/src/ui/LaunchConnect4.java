@@ -20,7 +20,7 @@ public class LaunchConnect4 {
 		} else
 
 		{
-			Connect4TextConsole.playTextGame(myScanner);
+			Connect4TextConsole newPlayer = new Connect4TextConsole();
 		}
 
 	}

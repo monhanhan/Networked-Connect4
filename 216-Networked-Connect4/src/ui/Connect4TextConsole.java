@@ -1,9 +1,13 @@
 package ui;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Socket;
 import java.util.Scanner;
 
 import core.Connect4;
 import core.Connect4ComputerPlayer;
+import core.Connect4Constants;
 
 /**
  * 
@@ -11,16 +15,53 @@ import core.Connect4ComputerPlayer;
  * @version 4.0
  *
  */
-public class Connect4TextConsole {
+public class Connect4TextConsole implements Connect4Constants {
+	private DataInputStream fromServer;
+	private DataOutputStream toServer;
+
+	private char player;
+
+	private boolean myTurn;
+
+	private boolean isGameOver;
+
+	private String host = "localhost";
+	private int port = 8000;
+
+	private Socket mySocket;
+
+	public Connect4TextConsole() {
+		this.myTurn = false;
+		this.isGameOver = false;
+
+		try {
+			this.mySocket = new Socket(host, port);
+
+			fromServer = new DataInputStream(mySocket.getInputStream());
+			toServer = new DataOutputStream(mySocket.getOutputStream());
+
+		} catch (Exception e) {
+			System.out.println("No server available.");
+			System.exit(0);
+		}
+	}
+
+	public void start() {
+		new Thread(() -> {
+			System.out.println("poopiedooks");
+
+		});
+	}
 
 	/**
 	 * This handles the logic for playing a text based game of connect4
 	 * 
-	 * @param myScanner scanner
 	 */
-	protected static void playTextGame(Scanner myScanner) {
+	protected void playTextGame() {
 		// Create a new instance of the game.
 		Connect4 myGame = new Connect4();
+
+		Scanner myScanner = new Scanner(System.in);
 
 		printBoard(myGame);
 		printGameStart();
@@ -88,7 +129,6 @@ public class Connect4TextConsole {
 	 * either a 'C' or a 'P'. Input can be upper or lower case with any number
 	 * of spaces.
 	 * 
-	 * @param myScanner is a scanner object taking input from the console.
 	 * @return is a boolean representing whether the player wants to play
 	 *         against a computer.
 	 */
