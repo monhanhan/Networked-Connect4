@@ -72,6 +72,8 @@ public class Connect4TextConsole implements Connect4Constants {
 					// If I joined 2nd I am player O.
 				} else {
 					this.player = 'O';
+					System.out.println(
+							"Welcome to the game. You are player 2 and your token is O");
 
 				}
 
