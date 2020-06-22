@@ -22,13 +22,15 @@ public class Connect4Server extends Application implements Connect4Constants {
 		TextArea serverLog = new TextArea();
 		// Create a scene and place it in the stage
 		Scene scene = new Scene(new ScrollPane(serverLog), 450, 200);
-		primaryStage.setTitle("TicTacToeServer"); // Set the stage title
+		primaryStage.setTitle("Connect4Server"); // Set the stage title
 		primaryStage.setScene(scene); // Place the scene in the stage
 		primaryStage.show(); // Display the stage
 
 		new Thread(() -> {
 			try {
 				// Create a server socket
+				// TODO: figure a way to properly close the server socket,
+				// provided there is time.
 				ServerSocket serverSocket = new ServerSocket(8000);
 				Platform.runLater(() -> serverLog.appendText(
 						new Date() + ": Server started at socket 8000\n"));
@@ -90,13 +92,15 @@ public class Connect4Server extends Application implements Connect4Constants {
 		private Socket player1;
 		private Socket player2;
 
-		private DataInputStream fromPlayer1;
-		private DataOutputStream toPlayer1;
-		private DataInputStream fromPlayer2;
-		private DataOutputStream toPlayer2;
+		// TODO: I don't think I need these. If I make the program work without
+		// them I will come back and remove them.
+		// private DataInputStream fromPlayer1;
+		// private DataOutputStream toPlayer1;
+		// private DataInputStream fromPlayer2;
+		// private DataOutputStream toPlayer2;
 
 		// Continue to play
-		private boolean continueToPlay = true;
+		// private boolean continueToPlay = true;
 
 		/** Construct a thread */
 		public HandleASession(Socket player1, Socket player2) {
@@ -121,52 +125,6 @@ public class Connect4Server extends Application implements Connect4Constants {
 				// This is just to let player 1 know to start
 				toPlayer1.writeInt(1);
 
-				// Continuously serve the players and determine and report
-				// the game status to the players
-				while (true) {
-					// Receive a move from player 1
-					int row = fromPlayer1.readInt();
-					int column = fromPlayer1.readInt();
-					cell[row][column] = 'X';
-
-					// Check if Player 1 wins
-					if (isWon('X')) {
-						toPlayer1.writeInt(PLAYER1_WON);
-						toPlayer2.writeInt(PLAYER1_WON);
-						sendMove(toPlayer2, row, column);
-						break; // Break the loop
-					} else if (isFull()) { // Check if all cells are filled
-						toPlayer1.writeInt(DRAW);
-						toPlayer2.writeInt(DRAW);
-						sendMove(toPlayer2, row, column);
-						break;
-					} else {
-						// Notify player 2 to take the turn
-						toPlayer2.writeInt(CONTINUE);
-
-						// Send player 1's selected row and column to player 2
-						sendMove(toPlayer2, row, column);
-					}
-
-					// Receive a move from Player 2
-					row = fromPlayer2.readInt();
-					column = fromPlayer2.readInt();
-					cell[row][column] = 'O';
-
-					// Check if Player 2 wins
-					if (isWon('O')) {
-						toPlayer1.writeInt(PLAYER2_WON);
-						toPlayer2.writeInt(PLAYER2_WON);
-						sendMove(toPlayer1, row, column);
-						break;
-					} else {
-						// Notify player 1 to take the turn
-						toPlayer1.writeInt(CONTINUE);
-
-						// Send player 2's selected row and column to player 1
-						sendMove(toPlayer1, row, column);
-					}
-				}
 			} catch (IOException ex) {
 				ex.printStackTrace();
 			}
