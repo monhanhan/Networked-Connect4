@@ -2,6 +2,7 @@ package ui;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -48,6 +49,40 @@ public class Connect4TextConsole implements Connect4Constants {
 
 	public void start() {
 		new Thread(() -> {
+			try {
+				// Get the server to tell me if I joined first.
+				int playerInt = fromServer.readInt();
+
+				// If I joined first, I am player X
+				if (playerInt == PLAYER1) {
+					this.player = 'X';
+					System.out
+							.println("You are first player. Your marker is X");
+					System.out.println("Waiting for player 2");
+					// TODO: If I want to include code to play against a
+					// computer I would put it here.
+
+					// This line gets an int from the server indicating that a
+					// player has joined and that I am ready to start the game.
+					// This int itself is useless to me.
+					fromServer.readInt();
+
+					myTurn = true;
+
+					// If I joined 2nd I am player O.
+				} else {
+					this.player = 'O';
+
+				}
+
+				// TODO: Implement a loop here to take turns until the game is
+				// over. Figure out if a board object can be passed from the
+				// server.
+
+			} catch (IOException e) {
+				System.out.println(
+						"Sorry, something went wrong with the server. Please try again later.");
+			}
 
 		}).start();
 	}
@@ -56,7 +91,7 @@ public class Connect4TextConsole implements Connect4Constants {
 	 * This handles the logic for playing a text based game of connect4
 	 * 
 	 */
-	protected void playTextGame() {
+	private void playTextGame() {
 		// Create a new instance of the game.
 		Connect4 myGame = new Connect4();
 
