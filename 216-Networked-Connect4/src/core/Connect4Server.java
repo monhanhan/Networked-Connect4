@@ -14,13 +14,14 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 
-public class Connect4Server extends Application {
+public class Connect4Server extends Application implements Connect4Constants {
+	private int sessionNo = 1;
 
 	@Override
 	public void start(Stage primaryStage) {
 		TextArea serverLog = new TextArea();
 		// Create a scene and place it in the stage
-		Scene scene = new Scene(new ScrollPane(taLog), 450, 200);
+		Scene scene = new Scene(new ScrollPane(serverLog), 450, 200);
 		primaryStage.setTitle("TicTacToeServer"); // Set the stage title
 		primaryStage.setScene(scene); // Place the scene in the stage
 		primaryStage.show(); // Display the stage
@@ -29,12 +30,12 @@ public class Connect4Server extends Application {
 			try {
 				// Create a server socket
 				ServerSocket serverSocket = new ServerSocket(8000);
-				Platform.runLater(() -> taLog.appendText(
+				Platform.runLater(() -> serverLog.appendText(
 						new Date() + ": Server started at socket 8000\n"));
 
 				// Ready to create a session for every two players
 				while (true) {
-					Platform.runLater(() -> taLog.appendText(
+					Platform.runLater(() -> serverLog.appendText(
 							new Date() + ": Wait for players to join session "
 									+ sessionNo + '\n'));
 
@@ -42,10 +43,10 @@ public class Connect4Server extends Application {
 					Socket player1 = serverSocket.accept();
 
 					Platform.runLater(() -> {
-						taLog.appendText(
+						serverLog.appendText(
 								new Date() + ": Player 1 joined session "
 										+ sessionNo + '\n');
-						taLog.appendText("Player 1's IP address"
+						serverLog.appendText("Player 1's IP address"
 								+ player1.getInetAddress().getHostAddress()
 								+ '\n');
 					});
@@ -58,10 +59,10 @@ public class Connect4Server extends Application {
 					Socket player2 = serverSocket.accept();
 
 					Platform.runLater(() -> {
-						taLog.appendText(
+						serverLog.appendText(
 								new Date() + ": Player 2 joined session "
 										+ sessionNo + '\n');
-						taLog.appendText("Player 2's IP address"
+						serverLog.appendText("Player 2's IP address"
 								+ player2.getInetAddress().getHostAddress()
 								+ '\n');
 					});
@@ -71,7 +72,7 @@ public class Connect4Server extends Application {
 							.writeInt(PLAYER2);
 
 					// Display this session and increment session number
-					Platform.runLater(() -> taLog.appendText(
+					Platform.runLater(() -> serverLog.appendText(
 							new Date() + ": Start a thread for session "
 									+ sessionNo++ + '\n'));
 
@@ -85,12 +86,9 @@ public class Connect4Server extends Application {
 	}
 
 	// Define the thread class for handling a new session for two players
-	class HandleASession implements Runnable, TicTacToeConstants {
+	class HandleASession implements Runnable, Connect4Constants {
 		private Socket player1;
 		private Socket player2;
-
-		// Create and initialize cells
-		private char[][] cell = new char[3][3];
 
 		private DataInputStream fromPlayer1;
 		private DataOutputStream toPlayer1;
@@ -104,11 +102,6 @@ public class Connect4Server extends Application {
 		public HandleASession(Socket player1, Socket player2) {
 			this.player1 = player1;
 			this.player2 = player2;
-
-			// Initialize cells
-			for (int i = 0; i < 3; i++)
-				for (int j = 0; j < 3; j++)
-					cell[i][j] = ' ';
 		}
 
 		/** Implement the run() method for the thread */
@@ -186,48 +179,6 @@ public class Connect4Server extends Application {
 			out.writeInt(column); // Send column index
 		}
 
-		/** Determine if the cells are all occupied */
-		private boolean isFull() {
-			for (int i = 0; i < 3; i++)
-				for (int j = 0; j < 3; j++)
-					if (cell[i][j] == ' ')
-						return false; // At least one cell is not filled
-
-			// All cells are filled
-			return true;
-		}
-
-		/** Determine if the player with the specified token wins */
-		private boolean isWon(char token) {
-			// Check all rows
-			for (int i = 0; i < 3; i++)
-				if ((cell[i][0] == token) && (cell[i][1] == token)
-						&& (cell[i][2] == token)) {
-					return true;
-				}
-
-			/** Check all columns */
-			for (int j = 0; j < 3; j++)
-				if ((cell[0][j] == token) && (cell[1][j] == token)
-						&& (cell[2][j] == token)) {
-					return true;
-				}
-
-			/** Check major diagonal */
-			if ((cell[0][0] == token) && (cell[1][1] == token)
-					&& (cell[2][2] == token)) {
-				return true;
-			}
-
-			/** Check subdiagonal */
-			if ((cell[0][2] == token) && (cell[1][1] == token)
-					&& (cell[2][0] == token)) {
-				return true;
-			}
-
-			/** All checked, but no winner */
-			return false;
-		}
 	}
 
 	/**
