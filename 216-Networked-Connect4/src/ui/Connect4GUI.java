@@ -23,7 +23,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
-//TODO: there is a bug in this code that prevents the player from ever winning. Find it and squash it. It lives in the code to update player moves. 
+//TODO: there is a bug in this code that prevents the player from ever winning. 
+//Find it and squash it. It lives in the code to update player moves. 
 
 /**
  * 
