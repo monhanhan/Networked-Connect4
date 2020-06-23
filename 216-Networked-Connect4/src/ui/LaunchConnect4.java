@@ -21,7 +21,9 @@ public class LaunchConnect4 {
 
 		{
 			Connect4TextConsole newPlayer = new Connect4TextConsole();
-			myScanner.close();
+			// TODO: this may cause a resource leak. I guess it shouldn't
+			// matter.
+			// myScanner.close();
 			newPlayer.start();
 		}
 
