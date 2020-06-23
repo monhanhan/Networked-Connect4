@@ -31,9 +31,19 @@ public class Connect4TextConsole implements Connect4Constants {
 
 	private Socket mySocket;
 
+	private char[][] board;
+
 	public Connect4TextConsole() {
 		this.myTurn = false;
 		this.isGameOver = false;
+
+		this.board = new char[6][7];
+		for (int i = 0; i < 6; i++) {
+			for (int j = 0; j < 7; j++) {
+				this.board[i][j] = ' ';
+
+			}
+		}
 
 		try {
 			this.mySocket = new Socket(host, port);
@@ -52,6 +62,8 @@ public class Connect4TextConsole implements Connect4Constants {
 			try {
 				// Get the server to tell me if I joined first.
 				int playerInt = fromServer.readInt();
+
+				Scanner myScanner = new Scanner(System.in);
 
 				// If I joined first, I am player X
 				if (playerInt == PLAYER1) {
@@ -80,6 +92,17 @@ public class Connect4TextConsole implements Connect4Constants {
 				// TODO: Implement a loop here to take turns until the game is
 				// over. Figure out if a board object can be passed from the
 				// server.
+
+				while (!isGameOver) {
+					if (myTurn) {
+						printBoard();
+						// TODO: logic to take player move lives here. Parse
+						// input, give to server, if item is returned true,
+						// print the board after it gets passed from the server.
+					} else {
+						// TODO: Set up code to wait for player 2 to move.
+					}
+				}
 
 			} catch (IOException e) {
 				System.out.println(
@@ -210,8 +233,7 @@ public class Connect4TextConsole implements Connect4Constants {
 	 * 
 	 * @param myGame is a Connect4 object.
 	 */
-	private static void printBoard(Connect4 myGame) {
-		char[][] board = myGame.getBoard();
+	private void printBoard() {
 		for (char[] subArray : board) {
 			System.out.print("|");
 
@@ -249,21 +271,26 @@ public class Connect4TextConsole implements Connect4Constants {
 	 * if full or the move is invalid the player will be prompted again for new
 	 * input.
 	 * 
-	 * @param player    is the player (X or O) who is taking their turn
 	 * @param myScanner is a scanner object taking input from the console.
-	 * @param myGame    is a Connect4 object.
 	 */
-	private static void takeTurn(char player, Scanner myScanner,
-			Connect4 myGame) {
+	private void takeTurn(Scanner myScanner) {
 		System.out.print("Player");
 		System.out.print(player);
 		System.out.print(" - your turn. ");
 
-		boolean validMove = false;
+		int serverReturn = 0;
 
-		while (!validMove) {
+		while (serverReturn != CONTINUE) {
 			int col = parseInput(myScanner);
-			validMove = myGame.addPiece(col, player);
+			try {
+				toServer.writeInt(col);
+				serverReturn = fromServer.readInt();
+
+			} catch (IOException e) {
+				// TODO: consider writing a proper error message here.
+				e.printStackTrace();
+				System.exit(0);
+			}
 		}
 	}
 
