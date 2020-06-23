@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
 
-import core.Connect4;
-import core.Connect4ComputerPlayer;
 import core.Connect4Constants;
 
 /**
@@ -21,6 +19,8 @@ public class Connect4TextConsole implements Connect4Constants {
 	private DataOutputStream toServer;
 
 	private char player;
+
+	private char otherPlayer;
 
 	private boolean myTurn;
 
@@ -68,6 +68,7 @@ public class Connect4TextConsole implements Connect4Constants {
 				// If I joined first, I am player X
 				if (playerInt == PLAYER1) {
 					this.player = 'X';
+					this.otherPlayer = 'O';
 					System.out
 							.println("You are first player. Your marker is X");
 					System.out.println("Waiting for player 2");
@@ -84,25 +85,52 @@ public class Connect4TextConsole implements Connect4Constants {
 					// If I joined 2nd I am player O.
 				} else {
 					this.player = 'O';
+					this.otherPlayer = 'X';
 					System.out.println(
 							"Welcome to the game. You are player 2 and your token is O");
 
 				}
 
-				// TODO: Implement a loop here to take turns until the game is
-				// over. Figure out if a board object can be passed from the
-				// server.
+				// This is set up so we can check our end game state later.
+				int gameEnd = CONTINUE;
 
 				while (!isGameOver) {
 					if (myTurn) {
 						printBoard();
-						// TODO: logic to take player move lives here. Parse
-						// input, give to server, if item is returned true,
-						// print the board after it gets passed from the server.
+						takeTurn(myScanner);
+						int newY = fromServer.readInt();
+						int newX = fromServer.readInt();
+						board[newY][newX] = player;
+						myTurn = false;
+
+						// Check for a game ending condition. If found, break
+						// the loop.
+						gameEnd = fromServer.readInt();
+						if (gameEnd != CONTINUE) {
+							isGameOver = true;
+							break;
+						}
+
 					} else {
-						// TODO: Set up code to wait for player 2 to move.
+						printBoard();
+						int newY = fromServer.readInt();
+						int newX = fromServer.readInt();
+						board[newY][newX] = otherPlayer;
+						myTurn = true;
+
+						// Check for a game ending condition. If found, break
+						// the loop.
+						gameEnd = fromServer.readInt();
+						if (gameEnd != CONTINUE) {
+							isGameOver = true;
+							break;
+						}
 					}
 				}
+
+				// If we got here it means we have reached an end game
+				// condition.
+				printGameEnd(gameEnd);
 
 			} catch (IOException e) {
 				System.out.println(
@@ -110,76 +138,6 @@ public class Connect4TextConsole implements Connect4Constants {
 			}
 
 		}).start();
-	}
-
-	/**
-	 * This handles the logic for playing a text based game of connect4
-	 * 
-	 */
-	private void playTextGame() {
-		// Create a new instance of the game.
-		Connect4 myGame = new Connect4();
-
-		Scanner myScanner = new Scanner(System.in);
-
-		printBoard(myGame);
-		printGameStart();
-
-		char player = 'Q';
-
-		// TODO: This only exists here to bypass the logic of playing with a
-		// computer. Correct this later.
-		// boolean playComputer = playComputer(myScanner);
-		boolean playComputer = false;
-
-		if (playComputer) {
-			System.out.println("Start game against computer.");
-		}
-
-		boolean isGameOver = false;
-		boolean victory = false;
-
-		// Until an end game condition is met, swap turns and allow the players
-		// to play
-		// the game.
-		while (!isGameOver) {
-			if (player != 'X') {
-				player = 'X';
-			} else {
-				player = 'O';
-			}
-
-			// This is if statement enables a computer turn if the player has
-			// opted to play
-			// against a computer and if it is the computer's turn.
-			if ((player == 'O') && playComputer) {
-				System.out.println();
-				System.out.println("Computer turn");
-				System.out.println();
-				Connect4ComputerPlayer.takeTurn(myGame, player);
-				System.out.println();
-
-			} else {
-				takeTurn(player, myScanner, myGame);
-
-			}
-
-			// Check end game conditions.
-			victory = myGame.checkVictory();
-			boolean tie = myGame.checkTie();
-			isGameOver = (victory || tie);
-
-			printBoard(myGame);
-
-		}
-
-		// Print results
-		printGameEnd(victory, player);
-
-		// Close down the game.
-		myScanner.close();
-		System.exit(0);
-
 	}
 
 	/**
@@ -249,18 +207,20 @@ public class Connect4TextConsole implements Connect4Constants {
 	/**
 	 * This prints the end of game messages indicating victory/winner or a tie.
 	 * 
-	 * @param victory is a boolean indicating if there has been a victory. If
-	 *                false, that indicates a tie.
-	 * @param player  is the player (X or O) that won the match.
+	 * @param gameEnd is an int representation of how the game ended received
+	 *                from the server.
 	 */
-	private static void printGameEnd(boolean victory, char player) {
-		if (victory) {
-			System.out.print("Player ");
-			System.out.print(player);
-			System.out.print(" Won the Game");
+	private void printGameEnd(int gameEnd) {
+		if (gameEnd == DRAW) {
+			System.out.print("The Game was a Tie!");
 
 		} else {
-			System.out.print("The Game was a Tie!");
+			if (gameEnd == PLAYER1_WON) {
+				System.out.print("Player X won the Game!");
+
+			} else {
+				System.out.print("Player Y won the Game!");
+			}
 
 		}
 	}
