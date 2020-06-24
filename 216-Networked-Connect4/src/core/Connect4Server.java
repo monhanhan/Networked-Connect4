@@ -14,10 +14,22 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 
+/**
+ * This class runs a server application that will communicate with a client
+ * application in order to play a game of Connect4
+ * 
+ * @author Ryan Munin
+ * @version 1.0
+ *
+ */
 public class Connect4Server extends Application implements Connect4Constants {
 	private int sessionNo = 1;
 
 	@Override
+	/**
+	 * Entry point for the program starts the server and begins a new thread to
+	 * handle connections.
+	 */
 	public void start(Stage primaryStage) {
 		TextArea serverLog = new TextArea();
 		// Create a scene and place it in the stage
@@ -26,11 +38,13 @@ public class Connect4Server extends Application implements Connect4Constants {
 		primaryStage.setScene(scene); // Place the scene in the stage
 		primaryStage.show(); // Display the stage
 
+		/**
+		 * This lambda handles the logic for taking connections and starting a
+		 * game.
+		 */
 		new Thread(() -> {
 			try {
 				// Create a server socket
-				// TODO: figure a way to properly close the server socket,
-				// provided there is time.
 				ServerSocket serverSocket = new ServerSocket(8000);
 				Platform.runLater(() -> serverLog.appendText(
 						new Date() + ": Server started at socket 8000\n"));
@@ -87,20 +101,23 @@ public class Connect4Server extends Application implements Connect4Constants {
 		}).start();
 	}
 
-	// Define the thread class for handling a new session for two players
+	/**
+	 * This class handles the moves and logic for a networked game of Connect4
+	 * 
+	 * @author Ryan Munin
+	 * @version 1.0
+	 *
+	 */
 	class HandleASession implements Runnable, Connect4Constants {
 		private Socket player1;
 		private Socket player2;
 
-		// TODO: I don't think I need these. If I make the program work without
-		// them I will come back and remove them.
-		// private DataInputStream fromPlayer1;
-		// private DataOutputStream toPlayer1;
-		// private DataInputStream fromPlayer2;
-		// private DataOutputStream toPlayer2;
+		private Connect4 board;
 
-		// Continue to play
-		// private boolean continueToPlay = true;
+		private DataInputStream fromPlayer1;
+		private DataOutputStream toPlayer1;
+		private DataInputStream fromPlayer2;
+		private DataOutputStream toPlayer2;
 
 		/** Construct a thread */
 		public HandleASession(Socket player1, Socket player2) {
@@ -112,21 +129,123 @@ public class Connect4Server extends Application implements Connect4Constants {
 		public void run() {
 			try {
 				// Create data input and output streams
-				DataInputStream fromPlayer1 = new DataInputStream(
+				this.fromPlayer1 = new DataInputStream(
 						player1.getInputStream());
-				DataOutputStream toPlayer1 = new DataOutputStream(
+				this.toPlayer1 = new DataOutputStream(
 						player1.getOutputStream());
-				DataInputStream fromPlayer2 = new DataInputStream(
+				this.fromPlayer2 = new DataInputStream(
 						player2.getInputStream());
-				DataOutputStream toPlayer2 = new DataOutputStream(
+				this.toPlayer2 = new DataOutputStream(
 						player2.getOutputStream());
+
+				this.board = new Connect4();
 
 				// Write anything to notify player 1 to start
 				// This is just to let player 1 know to start
 				toPlayer1.writeInt(1);
 
+				while (true) {
+
+					// Player 1 takes a turn
+					p1Move();
+
+					// Check for a tie, update appropriately
+					if (board.checkTie()) {
+						toPlayer1.writeInt(DRAW);
+						toPlayer2.writeInt(DRAW);
+						break;
+
+						// Check for player 2 victory.
+					} else if (board.checkVictory()) {
+						toPlayer1.writeInt(PLAYER1_WON);
+						toPlayer2.writeInt(PLAYER1_WON);
+						break;
+
+						// If no tie or victory, continue.
+					} else {
+						// toPlayer1.writeInt(CONTINUE);
+						toPlayer2.writeInt(CONTINUE);
+					}
+
+					// Send the move to player 2
+					toPlayer2.writeInt(board.getLastY());
+					toPlayer2.writeInt(board.getLastX());
+
+					// player 2 takes a move
+					p2Move();
+
+					// Check for a tie, update appropriately
+					if (board.checkTie()) {
+						toPlayer1.writeInt(DRAW);
+						toPlayer2.writeInt(DRAW);
+						break;
+
+						// Check for player 2 victory.
+					} else if (board.checkVictory()) {
+						toPlayer1.writeInt(PLAYER2_WON);
+						toPlayer2.writeInt(PLAYER2_WON);
+						break;
+
+						// If no tie or victory, continue.
+					} else {
+						toPlayer1.writeInt(CONTINUE);
+						// toPlayer2.writeInt(CONTINUE);
+					}
+
+					// Move sent to player 1
+					toPlayer1.writeInt(board.getLastY());
+					toPlayer1.writeInt(board.getLastX());
+
+				}
+
 			} catch (IOException ex) {
 				ex.printStackTrace();
+			}
+		}
+
+		/**
+		 * This takes the move from player 1 and returns the information of
+		 * where a piece wound up to the ui from which it was sent.
+		 * 
+		 * @throws IOException
+		 */
+		private void p1Move() throws IOException {
+			boolean valid = false;
+			while (!valid) {
+				int col = fromPlayer1.readInt();
+				boolean moveAttempt = board.addPiece(col, 'X');
+
+				// If the piece is added to a valid column the client will be
+				// updated and the loop will exit.
+				if (moveAttempt) {
+					valid = true;
+					toPlayer1.writeInt(CONTINUE);
+					toPlayer1.writeInt(board.getLastY());
+					toPlayer1.writeInt(board.getLastX());
+				}
+			}
+		}
+
+		/**
+		 * This takes the move from player 2 and returns the information of
+		 * where a piece wound up to the ui from which it was sent.
+		 * 
+		 * @throws IOException
+		 */
+		private void p2Move() throws IOException {
+			boolean valid = false;
+			while (!valid) {
+				int col = fromPlayer2.readInt();
+				boolean moveAttempt = board.addPiece(col, 'O');
+
+				// If the piece is added to a valid column the client will be
+				// updated and the loop will exit.
+				if (moveAttempt) {
+					valid = true;
+					toPlayer2.writeInt(CONTINUE);
+					toPlayer2.writeInt(board.getLastY());
+					toPlayer2.writeInt(board.getLastX());
+				}
 			}
 		}
 

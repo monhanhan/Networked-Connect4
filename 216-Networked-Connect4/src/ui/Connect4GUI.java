@@ -1,263 +1,324 @@
 package ui;
 
-import java.util.Optional;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
 
-import core.Connect4;
-import core.Connect4ComputerPlayer;
+import core.Connect4Constants;
 import javafx.application.Application;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
+import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.ButtonType;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.Border;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.TilePane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
+import javafx.scene.shape.Ellipse;
+import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 
 /**
+ * This class provides a GUI for the Connect4 game. It allows the player to play
+ * the game by clicking on the column in which they want their piece to go.
+ * Networked games are now supported and must be initiated via the server.
  * 
  * @author Ryan Munin
- * @version 1.0
+ * @version 2.0
  * 
- *          This class provides a GUI for the Connect4 game. It allows the
- *          player to select if they would prefer to play against a computer or
- *          another human. It then allows the player to play the game by
- *          clicking on the column in which they want their piece to go.
- *
  */
-public class Connect4GUI extends Application {
+public class Connect4GUI extends Application implements Connect4Constants {
 	Stage primaryStage;
 
-	private Connect4 myBoard;
-	private boolean computerPlayer;
-	private boolean redTurn;
+	private char player;
+	private char otherPlayer;
+	private boolean myTurn;
+	private boolean isGameOver;
+	private boolean waiting = true;
 
-	// These exist here so that I don't have any magic numbers and to make
-	// changing
-	// the scale easier if I need to do that later.
-	private final int PANESIZE = 338;
-	private final int INSET = 8;
-	private final int TILESIZE = 46;
+	private Label titleLabel = new Label();
+	private Label statusLabel = new Label();
+
+	private Cell[][] myCell = new Cell[6][7];
+
+	private String host = "localhost";
+	private int port = 8000;
+
+	private Socket mySocket;
+
+	private DataInputStream fromServer;
+	private DataOutputStream toServer;
+
+	private int columnSelected;
 
 	/**
 	 * This starts the application.
 	 */
 	@Override
 	public void start(Stage primaryStage) throws Exception {
-		this.myBoard = new Connect4();
+		this.myTurn = false;
+		this.isGameOver = false;
 
-		// This generates an alert to let the player pick their opponent.
-		Alert computerChoice = new Alert(Alert.AlertType.CONFIRMATION);
-		computerChoice.setTitle("Play against computer");
-		computerChoice.setHeaderText(
-				"Press ok to play against a computer or cancel to play against a human");
-		computerChoice.setContentText(
-				"If you close this window without making a choice, you will play against a human by default.");
-
-		Optional<ButtonType> result = computerChoice.showAndWait();
-		ButtonType button = result.orElse(ButtonType.CANCEL);
-
-		if (button == ButtonType.OK) {
-			this.computerPlayer = true;
-
-		} else if (button == ButtonType.CANCEL) {
-			this.computerPlayer = false;
-		}
-
-		this.redTurn = true;
-
-		playGame(primaryStage);
-
-	}
-
-	/**
-	 * This handles the logic to draw and redraw the game as well as setting up
-	 * the buttons the player will need to click on.
-	 * 
-	 * @param primaryStage
-	 */
-	public void playGame(Stage primaryStage) {
-		BorderPane myBorders = makeBorders();
-
-		Scene myScene = new Scene(myBorders);
-
-		makeMoves(myScene);
-
-		primaryStage.setTitle("Connect 4");
-		primaryStage.setScene(myScene);
-		this.primaryStage = primaryStage;
-		primaryStage.show();
-		checkGameOver(myScene);
-
-	}
-
-	/**
-	 * This sets up a BorderPane to hold the smaller panes that will make up our
-	 * grid.
-	 * 
-	 * @return BorderPane
-	 */
-	private BorderPane makeBorders() {
-		TilePane myTiles = makePanes();
-		myTiles.setMaxSize(PANESIZE, PANESIZE);
-		myTiles.setMinSize(PANESIZE, PANESIZE);
-
-		BorderPane myBorders = new BorderPane();
-
-		myBorders.setCenter(myTiles);
-
-		return myBorders;
-
-	}
-
-	/**
-	 * This makes TilePanes that are colored correctly depending on which player
-	 * has a piece in a given spot.
-	 * 
-	 * @return is a TilePane with circles of the appropriate colors.
-	 */
-	private TilePane makePanes() {
-		char[][] currBoard = myBoard.getBoard();
-
-		TilePane myTiles = new TilePane();
-
-		myTiles.setAlignment(Pos.CENTER);
-
-		myTiles.setBackground(
-				new Background(new BackgroundFill(Color.GREEN, null, null)));
-
+		GridPane myGrid = new GridPane();
 		for (int i = 0; i < 6; i++) {
 			for (int j = 0; j < 7; j++) {
-				StackPane tempPane = new StackPane();
+				myGrid.add(myCell[i][j] = new Cell(i, j), j, i);
+			}
+		}
 
-				tempPane.setBorder(new Border(new BorderStroke(Color.BLACK,
-						BorderStrokeStyle.SOLID, null, null)));
+		BorderPane myBorderPane = new BorderPane();
+		myBorderPane.setTop(titleLabel);
+		myBorderPane.setCenter(myGrid);
+		myBorderPane.setBottom(statusLabel);
 
-				Circle myCirc = new Circle();
+		Scene myScene = new Scene(myBorderPane, 320, 350);
+		primaryStage.setTitle("Connect4Client");
+		primaryStage.setScene(myScene);
+		primaryStage.show();
 
-				if (currBoard[i][j] == 'X') {
-					myCirc.setFill(Color.RED);
+		connectToServer();
 
-				} else if (currBoard[i][j] == 'O') {
-					myCirc.setFill(Color.BLUE);
+	}
 
-				} else {
-					myCirc.setFill(Color.WHITE);
+	/**
+	 * This handles connecting to the server and starts a new thread that
+	 * handles the logic of playing the game.
+	 */
+	private void connectToServer() {
+		try {
+			Socket socket = new Socket(host, port);
 
+			fromServer = new DataInputStream(socket.getInputStream());
+			toServer = new DataOutputStream(socket.getOutputStream());
+
+		} catch (Exception ex) {
+			// TODO: time permitting, produce a proper error message.
+			ex.printStackTrace();
+		}
+
+		/**
+		 * This thread handles the logic of playing the game.
+		 */
+		new Thread(() -> {
+			try {
+				int playerInt = fromServer.readInt();
+				if (playerInt == PLAYER1) {
+					this.player = 'X';
+					this.otherPlayer = 'O';
+					Platform.runLater(() -> {
+						titleLabel.setText("Player 1 with token 'X'");
+						statusLabel.setText("Waiting for player 2 to join");
+					});
+
+					// Start notification. Int is discarded.
+					fromServer.readInt();
+
+					Platform.runLater(() -> statusLabel
+							.setText("Player 2 has joined. I start first"));
+
+					myTurn = true;
+
+				} else if (playerInt == PLAYER2) {
+					this.player = 'O';
+					this.otherPlayer = 'X';
+					Platform.runLater(() -> {
+						titleLabel.setText("Player 2 with token 'O'");
+						statusLabel.setText("Waiting for player 1 to move");
+					});
 				}
 
-				myCirc.setRadius(20);
+				// This loop dictates that the players continue playing until
+				// the game concludes.
+				while (!isGameOver) {
+					if (playerInt == PLAYER1) {
+						waitForPlayerAction();
+						sendMove();
+						receiveInfoFromServer();
 
-				tempPane.getChildren().add(myCirc);
+					} else if (playerInt == PLAYER2) {
+						receiveInfoFromServer();
+						waitForPlayerAction();
+						sendMove();
+					}
+				}
 
-				StackPane.setMargin(myCirc, new Insets(2, 2, 2, 2));
-
-				myTiles.getChildren().add(tempPane);
-
-			}
-		}
-		return myTiles;
-
-	}
-
-	/**
-	 * This makes the computer move and then returns control to the player.
-	 * 
-	 * @param myScene is the current scene we are using.
-	 */
-	private void computerTurn(Scene myScene) {
-		Connect4ComputerPlayer.takeTurn(myBoard, 'O');
-		redTurn = true;
-
-	}
-
-	/**
-	 * This checks if a game is over and displays an alert accordingly.
-	 * 
-	 * @param myScene is the scene in use.
-	 */
-	private void checkGameOver(Scene myScene) {
-		boolean win = myBoard.checkVictory();
-		boolean tie = myBoard.checkTie();
-
-		if (win || tie) {
-			Alert gameOver = new Alert(AlertType.INFORMATION);
-			gameOver.setTitle("Game Over");
-
-			if (tie) {
-				gameOver.setHeaderText("You Tie");
-
-			} else if (!redTurn) {
-				gameOver.setHeaderText("Red Wins!");
-
-			} else {
-				gameOver.setHeaderText("Blue Wins!");
-
+			} catch (Exception ex) {
+				ex.printStackTrace();
 			}
 
-			gameOver.showAndWait();
-			System.exit(0);
-
-		}
+		}).start();
 
 	}
 
 	/**
-	 * This handles the logic for players making moves. If the player is playing
-	 * against the computer, the computer moves immediately after the player
-	 * does.
+	 * This makes the program wait until a valid move has been submitted.
 	 * 
-	 * @param myScene is the Scene object currently in use.
+	 * @throws InterruptedException
 	 */
-	private void makeMoves(Scene myScene) {
-		char player;
-		if (redTurn) {
-			player = 'X';
+	private void waitForPlayerAction() throws InterruptedException {
+		while (waiting) {
+			Thread.sleep(100);
+		}
+
+		waiting = true;
+	}
+
+	/**
+	 * This takes information from the server and handles program execution
+	 * based on what the server sends.
+	 * 
+	 * @throws IOException
+	 */
+	private void receiveInfoFromServer() throws IOException {
+		int status = fromServer.readInt();
+
+		if (status == PLAYER1_WON) {
+			// Player 1 won, stop playing
+			isGameOver = true;
+			if (player == 'X') {
+				Platform.runLater(() -> statusLabel.setText("I won! (X)"));
+			} else if (player == 'O') {
+				Platform.runLater(
+						() -> statusLabel.setText("Player 1 (X) has won!"));
+				receiveMove();
+			}
+
+		} else if (status == PLAYER2_WON) {
+			// Player 2 won, stop playing
+			isGameOver = true;
+			if (player == 'O') {
+				Platform.runLater(() -> statusLabel.setText("I won! (O)"));
+			} else if (player == 'X') {
+				Platform.runLater(
+						() -> statusLabel.setText("Player 2 (O) has won!"));
+				receiveMove();
+			}
+
+		} else if (status == DRAW) {
+			// No winner, game is over
+			isGameOver = true;
+			Platform.runLater(
+					() -> statusLabel.setText("Game is over, no winner!"));
+
+			if (player == 'O') {
+				receiveMove();
+			}
 
 		} else {
-			player = 'O';
+			receiveMove();
+			Platform.runLater(() -> statusLabel.setText("My turn"));
+			myTurn = true; // It is my turn
+		}
+	}
+
+	/**
+	 * This sends a move to the server and calls update to update the GUI.
+	 * 
+	 * @throws IOException
+	 */
+	private void sendMove() throws IOException {
+		toServer.writeInt(columnSelected);
+		fromServer.readInt();
+		update();
+	}
+
+	/**
+	 * This receives a move from the other player and updates the GUI
+	 * 
+	 * @throws IOException
+	 */
+	private void receiveMove() throws IOException {
+		int row = fromServer.readInt();
+		int column = fromServer.readInt();
+		Platform.runLater(() -> myCell[row][column].setToken(otherPlayer));
+	}
+
+	/**
+	 * This updates the GUI with the move the player just made after it has been
+	 * handled by the server.
+	 * 
+	 * @throws IOException
+	 */
+	private void update() throws IOException {
+		int row = fromServer.readInt();
+		int column = fromServer.readInt();
+		Platform.runLater(() -> myCell[row][column].setToken(player));
+	}
+
+	/**
+	 * This creates clickable cells that can return their coordinates.
+	 * 
+	 * @author Ryan
+	 *
+	 */
+	public class Cell extends Pane {
+		// Indicate the row and column of this cell in the board
+		private int column;
+
+		// Token used for this cell
+		private char token = ' ';
+
+		public Cell(int row, int column) {
+			this.column = column;
+			this.setPrefSize(2000, 2000); // What happens without this?
+			setStyle("-fx-border-color: black"); // Set cell's border
+			this.setOnMouseClicked(e -> handleMouseClick());
 		}
 
-		// This makes it so that when the player clicks a column they get to
-		// make a move.
-		myScene.setOnMouseClicked((event) -> {
-			int x = (int) Math.round(event.getSceneX());
-			int y = (int) Math.round(event.getSceneY());
+		/** Return token */
+		public char getToken() {
+			return token;
+		}
 
-			// This insures we have a valid position on which to click.
-			if ((x > INSET) && (x < PANESIZE - INSET) && (y > INSET)
-					&& (y < (PANESIZE - INSET))) {
+		/** Set a new token */
+		public void setToken(char c) {
+			token = c;
+			repaint();
+		}
 
-				// This converts the click from pixels to grid position.
-				int mathX = (x - INSET) / TILESIZE;
+		protected void repaint() {
+			if (token == 'X') {
+				Line line1 = new Line(10, 10, this.getWidth() - 10,
+						this.getHeight() - 10);
+				line1.endXProperty().bind(this.widthProperty().subtract(10));
+				line1.endYProperty().bind(this.heightProperty().subtract(10));
+				Line line2 = new Line(10, this.getHeight() - 10,
+						this.getWidth() - 10, 10);
+				line2.startYProperty().bind(this.heightProperty().subtract(10));
+				line2.endXProperty().bind(this.widthProperty().subtract(10));
 
-				if (myBoard.addPiece(mathX, player)) {
-					// TODO: there is a bug in this code that prevents the
-					// player from ever winning. Find it and squash it. It lives
-					// in the code to update player moves.
+				// Add the lines to the pane
+				this.getChildren().addAll(line1, line2);
+			} else if (token == 'O') {
+				Ellipse ellipse = new Ellipse(this.getWidth() / 2,
+						this.getHeight() / 2, this.getWidth() / 2 - 10,
+						this.getHeight() / 2 - 10);
+				ellipse.centerXProperty().bind(this.widthProperty().divide(2));
+				ellipse.centerYProperty().bind(this.heightProperty().divide(2));
+				ellipse.radiusXProperty()
+						.bind(this.widthProperty().divide(2).subtract(10));
+				ellipse.radiusYProperty()
+						.bind(this.heightProperty().divide(2).subtract(10));
+				ellipse.setStroke(Color.BLACK);
+				ellipse.setFill(Color.WHITE);
 
-					redTurn = !redTurn;
-					if (computerPlayer) {
-						computerTurn(myScene);
-					}
-
-					playGame(primaryStage);
-
-				}
-
+				getChildren().add(ellipse); // Add the ellipse to the pane
 			}
+		}
 
-		});
-
+		/**
+		 * This sets up a handler that updates to the last column that has been
+		 * clicked so that the number can be sent to the server.
+		 */
+		private void handleMouseClick() {
+			// If cell is not occupied and the player has the turn
+			if (token == ' ' && myTurn) {
+				myTurn = false;
+				columnSelected = column;
+				statusLabel.setText("Waiting for the other player to move");
+				waiting = false; // Just completed a successful move
+			}
+		}
 	}
 
 }

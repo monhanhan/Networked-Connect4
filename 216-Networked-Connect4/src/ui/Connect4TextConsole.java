@@ -115,6 +115,8 @@ public class Connect4TextConsole implements Connect4Constants {
 						printBoard();
 						int newY = fromServer.readInt();
 						int newX = fromServer.readInt();
+						// TODO: test print
+						System.out.println("poopiedooks");
 						board[newY][newX] = otherPlayer;
 						myTurn = true;
 
@@ -238,7 +240,7 @@ public class Connect4TextConsole implements Connect4Constants {
 		System.out.print(player);
 		System.out.print(" - your turn. ");
 
-		int serverReturn = 0;
+		int serverReturn = INVALID;
 
 		while (serverReturn != CONTINUE) {
 			int col = parseInput(myScanner);

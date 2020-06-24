@@ -4,6 +4,13 @@ import java.util.Scanner;
 
 import javafx.application.Application;
 
+/**
+ * This class launches the ui elements for Connect4
+ * 
+ * @author Ryan Munin
+ * @version 1.0
+ * 
+ */
 public class LaunchConnect4 {
 	/**
 	 * This is main. It calls all other methods in order.
@@ -11,21 +18,20 @@ public class LaunchConnect4 {
 	 * @param args is unused.
 	 */
 	public static void main(String[] args) {
-		Scanner myScanner = new Scanner(System.in);
+		// This launches the Connect4GUI application.
+		Application.launch(Connect4GUI.class);
 
-		if (chooseGUI(myScanner)) {
-			Application.launch(Connect4GUI.class);
-			myScanner.close();
-
-		} else
-
-		{
-			Connect4TextConsole newPlayer = new Connect4TextConsole();
-			// TODO: this may cause a resource leak. I guess it shouldn't
-			// matter.
-			// myScanner.close();
-			newPlayer.start();
-		}
+		/**
+		 * The code block below is commented out because only the GUI is in use
+		 * for now. Scanner myScanner = new Scanner(System.in);
+		 * 
+		 * if (chooseGUI(myScanner)) { Application.launch(Connect4GUI.class);
+		 * 
+		 * } else
+		 * 
+		 * { Connect4TextConsole newPlayer = new Connect4TextConsole();
+		 * newPlayer.start(); }
+		 */
 
 	}
 
