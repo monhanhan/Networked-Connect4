@@ -92,7 +92,6 @@ public class Connect4GUI extends Application implements Connect4Constants {
 			toServer = new DataOutputStream(socket.getOutputStream());
 
 		} catch (Exception ex) {
-			// TODO: time permitting, produce a proper error message.
 			ex.printStackTrace();
 		}
 
