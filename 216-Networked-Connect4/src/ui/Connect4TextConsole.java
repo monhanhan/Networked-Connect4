@@ -190,8 +190,6 @@ public class Connect4TextConsole implements Connect4Constants {
 
 	/**
 	 * This prints the game board that has been passed from myGame
-	 * 
-	 * @param myGame is a Connect4 object.
 	 */
 	private void printBoard() {
 		for (char[] subArray : board) {

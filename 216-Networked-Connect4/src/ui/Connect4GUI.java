@@ -154,7 +154,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 	/**
 	 * This makes the program wait until a valid move has been submitted.
 	 * 
-	 * @throws InterruptedException
+	 * @throws InterruptedException inturrupetedException
 	 */
 	private void waitForPlayerAction() throws InterruptedException {
 		while (waiting) {
@@ -168,7 +168,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 	 * This takes information from the server and handles program execution
 	 * based on what the server sends.
 	 * 
-	 * @throws IOException
+	 * @throws IOException IOException
 	 */
 	private void receiveInfoFromServer() throws IOException {
 		int status = fromServer.readInt();
@@ -215,7 +215,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 	/**
 	 * This sends a move to the server and calls update to update the GUI.
 	 * 
-	 * @throws IOException
+	 * @throws IOException IOException
 	 */
 	private void sendMove() throws IOException {
 		toServer.writeInt(columnSelected);
@@ -226,7 +226,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 	/**
 	 * This receives a move from the other player and updates the GUI
 	 * 
-	 * @throws IOException
+	 * @throws IOException Will throw if something goes wrong with the server
 	 */
 	private void receiveMove() throws IOException {
 		int row = fromServer.readInt();
@@ -238,7 +238,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 	 * This updates the GUI with the move the player just made after it has been
 	 * handled by the server.
 	 * 
-	 * @throws IOException
+	 * @throws IOException IOException
 	 */
 	private void update() throws IOException {
 		int row = fromServer.readInt();
