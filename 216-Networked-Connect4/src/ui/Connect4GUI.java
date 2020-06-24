@@ -93,6 +93,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
+			System.exit(0);
 		}
 
 		/**
@@ -143,6 +144,7 @@ public class Connect4GUI extends Application implements Connect4Constants {
 
 			} catch (Exception ex) {
 				ex.printStackTrace();
+				System.exit(0);
 			}
 
 		}).start();

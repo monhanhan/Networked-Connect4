@@ -97,6 +97,7 @@ public class Connect4Server extends Application implements Connect4Constants {
 				}
 			} catch (IOException ex) {
 				ex.printStackTrace();
+				System.exit(0);
 			}
 		}).start();
 	}
@@ -200,6 +201,7 @@ public class Connect4Server extends Application implements Connect4Constants {
 
 			} catch (IOException ex) {
 				ex.printStackTrace();
+				System.exit(0);
 			}
 		}
 
